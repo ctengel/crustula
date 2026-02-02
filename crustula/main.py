@@ -148,7 +148,7 @@ def update_call(
 
 @app.post("/cookies/", response_model=JarPublic)
 def create_jar(*, session: Session = Depends(get_session), jar: JarCreate):
-    cookie_header, url = curl_to_cookies_txt.extract_curl_string(jar.curl_cmd)
+    url, cookie_header = curl_to_cookies_txt.extract_curl_string(jar.curl_cmd)
     cookies_txt = curl_to_cookies_txt.convert_header_to_cookies_str(cookie_header)
     db_jar = Jar(cookies=cookies_txt,
                  domain=domain_from_url(url),
