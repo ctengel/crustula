@@ -1,4 +1,5 @@
-import datetime
+"""pytests for crustula"""
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import create_engine, Session, SQLModel
@@ -35,27 +36,23 @@ def test_basic(client: TestClient):
     response = client.post("/cookies/", json={"curl_cmd": TESTING_CURL_CMD})
     assert response.status_code == 200
     jar_data = response.json()
-    assert jar_data["domain"] == "www.something.com"
+    assert jar_data["domain"] == "something.com"
 
     # get cookies
     response = client.get("/cookies/", params={"url": "https://www.something.com/page"})
     assert response.status_code == 200
     jar_data = response.json()
-    assert jar_data["domain"] == "www.something.com"
-    assert jar_data["jar"]["domain"] == "www.something.com"
+    assert jar_data["domain"] == "something.com"
+    assert jar_data["jar"]["domain"] == "something.com"
     # TODO: improve cookie parsing to get names/values
     assert "cookiea" in jar_data["jar"]["cookies"]
     assert "cookieb" in jar_data["jar"]["cookies"]
 
-    #response = client.get("/cookies/www.something.com/")
-    #assert response.status_code == 200
-    #jar_data = response.json()
-    #assert jar_data["id"] == 1
-    #assert jar_data["domain"] == "www.something.com"
-
-    # make a call
-    #response = client.post("/calls/", json={"domain": "www.something.com", "url": "https://www.something.com/page"})
-    #assert response.status_code == 200
-    #call_data = response.json()
-    #assert call_data["id"] == 1
-    #assert call_data["jar"]["id"] == 1
+    response = client.get("/domains/")
+    assert response.status_code == 200
+    jar_data = response.json()
+    matching_domains = [x for x in jar_data if x['domain'] == "something.com"]
+    assert len(matching_domains) == 1
+    assert matching_domains[0]['active_jar']
+    assert matching_domains[0]['recent_calls']
+    assert matching_domains[0]['active_jar']['id'] == matching_domains[0]['recent_calls'][0]['id']

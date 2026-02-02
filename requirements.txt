@@ -1,0 +1,5 @@
+tldextract
+fastapi
+sqlmodel
+pytest
+pylint

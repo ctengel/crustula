@@ -1,8 +1,10 @@
 """Main API for Crustula cookie jar service."""
 
 import datetime
+from contextlib import asynccontextmanager
 from fastapi import Depends, FastAPI, HTTPException
 from sqlmodel import Field, Relationship, Session, SQLModel, create_engine, select
+import tldextract
 from . import curl_to_cookies_txt
 
 class JarBase(SQLModel):
@@ -75,12 +77,15 @@ def get_session():
         yield session
 
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Create DB tables on startup"""
+    SQLModel.metadata.create_all(engine)
+    yield
 
 
-@app.on_event("startup")
-def on_startup():
-    create_db_and_tables()
+app = FastAPI(title="crustula cookie jar", lifespan=lifespan)
+
 
 def jar_for_domain(session: Session, domain: str) -> Jar | None:
     jars = session.exec(select(Jar).where(Jar.domain == domain)).all()
@@ -94,8 +99,8 @@ def jar_for_domain(session: Session, domain: str) -> Jar | None:
 
 
 def domain_from_url(url: str) -> str:
-    # TODO better url parsing
-    return url.split("/")[2]
+    # TODO consider the "private" list and top_domain_under_public_suffix
+    return tldextract.extract(url).registered_domain
 
 def jar_stats(jar: Jar) -> tuple[bool, datetime.datetime, int]:
     calls = jar.calls
@@ -114,9 +119,17 @@ def jar_stats(jar: Jar) -> tuple[bool, datetime.datetime, int]:
 
 @app.get("/cookies/", response_model=CallPublicWithJar)
 def get_cookies(*, session: Session = Depends(get_session), url: str):
+    # TODO more intuitive output
     domain = domain_from_url(url)
     jar = jar_for_domain(session, domain)
     if not jar:
+        db_call = Call(domain=domain,
+                       url=url,
+                       timestamp=datetime.datetime.now(),
+                       success=None,  # TODO should this be False?
+                       jar_id=None)
+        session.add(db_call)
+        session.commit()
         raise HTTPException(status_code=404, detail="No cookies for this domain")
     db_call = Call(domain=domain,
                    url=url,
@@ -165,12 +178,14 @@ def create_jar(*, session: Session = Depends(get_session), jar: JarCreate):
 def read_domains(
     *,
     session: Session = Depends(get_session)):
+    # TODO eval efficiency of this
     all_domains = set()
-    # TODO populate from jars and calls
+    all_domains.update(x.domain for x in session.exec(select(Jar)))
+    all_domains.update(x.domain for x in session.exec(select(Call)))
     domains = [DomainPublic(domain=domain,
-                            active_jar=jar_for_domain(session, domain),  # TODO convert to public
-                            recent_calls=[]) for domain in all_domains]
-    # TODO include recent calls
+                            active_jar=jar_for_domain(session, domain),
+                            recent_calls=session.exec(select(Call).where(Call.domain == domain).order_by(Call.timestamp.desc()).limit(3)).all())
+               for domain in all_domains]
     return domains
 
 @app.delete("/jars/{jar_id}")
