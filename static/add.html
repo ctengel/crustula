@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Add Cookie</title>
+</head>
+<body>
+    <form action="/cookies/" method="post">
+        <label for="payload">Cookie data</label><br>
+        <textarea id="payload" name="payload" rows="10" cols="60" placeholder="Enter cookie data..."></textarea><br>
+        <button type="submit">Submit</button>
+    </form>
+
+    <script>
+        document.querySelector('form').addEventListener('submit', function(e){
+            e.preventDefault();
+            fetch('/cookies/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ curl_cmd: document.getElementById('payload').value })
+            }).then(res => {
+                if (res.ok) location.reload();
+            });
+        });
+    </script>
+</body>
+</html>

@@ -3,6 +3,7 @@
 import datetime
 from contextlib import asynccontextmanager
 from fastapi import Depends, FastAPI, HTTPException
+from fastapi.staticfiles import StaticFiles
 from sqlmodel import Field, Relationship, Session, SQLModel, create_engine, select
 import tldextract
 from . import curl_to_cookies_txt
@@ -85,6 +86,8 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="crustula cookie jar", lifespan=lifespan)
+
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
 def jar_for_domain(session: Session, domain: str) -> Jar | None:
