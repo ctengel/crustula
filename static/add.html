@@ -5,23 +5,50 @@
     <title>Add Cookie</title>
 </head>
 <body>
-    <form action="/cookies/" method="post">
+    <h2>Add cookies</h2>
+    <form id="cookie-form" action="/cookies/" method="post">
         <label for="payload">Cookie data</label><br>
         <textarea id="payload" name="payload" rows="10" cols="60" placeholder="Enter cookie data..."></textarea><br>
         <button type="submit">Submit</button>
     </form>
 
+    <h2>Add account</h2>
+    <form id="account-form">
+        <label for="domain">Domain</label><br>
+        <input id="domain" name="domain" type="text" size="40" placeholder="something.com" required><br>
+        <label for="label">Label (optional)</label><br>
+        <input id="label" name="label" type="text" size="40" placeholder="favs"><br>
+        <label for="username">Username</label><br>
+        <input id="username" name="username" type="text" size="40"><br>
+        <label for="password">Password</label><br>
+        <input id="password" name="password" type="password" size="40"><br>
+        <button type="submit">Submit</button>
+    </form>
+
     <script>
-        document.querySelector('form').addEventListener('submit', function(e){
-            e.preventDefault();
-            fetch('/cookies/', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ curl_cmd: document.getElementById('payload').value })
-            }).then(res => {
-                if (res.ok) location.reload();
+        function postForm(formId, url, bodyFn) {
+            document.getElementById(formId).addEventListener('submit', function(e){
+                e.preventDefault();
+                fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(bodyFn())
+                }).then(res => {
+                    if (res.ok) location.reload();
+                });
             });
-        });
+        }
+
+        postForm('cookie-form', '/cookies/', () => ({
+            curl_cmd: document.getElementById('payload').value
+        }));
+
+        postForm('account-form', '/accounts/', () => ({
+            domain: document.getElementById('domain').value,
+            label: document.getElementById('label').value || null,
+            username: document.getElementById('username').value,
+            password: document.getElementById('password').value
+        }));
     </script>
 </body>
 </html>
